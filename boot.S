@@ -19,7 +19,7 @@ _start:
     b       2f
 
 1:
-    stmia r4, {r5-r8}
+    stmia r4!, {r5-r8}
 
 2:
     cmp r4, r9
