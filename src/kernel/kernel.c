@@ -2,6 +2,7 @@
 #include <stdint.h>   // uint32_t, int32_t など固定幅整数型
 
 #include "kernel/uart.h"
+#include "common/stdio.h"
 
 /*
  * カーネルエントリポイント（boot.S の blx r3 から呼ばれる）
@@ -17,13 +18,13 @@ void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags)
     (void) atags;
 
     uart_init();
-    uart_puts("Hello, kernel World!\r\n");
+    puts("Hello, kernel World!\r\n");
 
-    uart_puts("input:");
+    puts("input:");
 
     // 受信した文字をそのままエコーバックし続ける
     while (1) {
-        uart_putc(uart_getc());
-        uart_puts("\ninput:");
+        putc(uart_getc());
+        puts("\ninput:");
     }
 }

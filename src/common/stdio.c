@@ -2,11 +2,12 @@
 #include "kernel/uart.h"
 
 int32_t getc(void) {
-    return (int)uart_getc();
+    return (int32_t)uart_getc();
 }
 
-char *gets(char *buf, int32_t size) {
-    int i = 0;
+char *gets(char *buf, size_t size) {
+    size_t i = 0;
+    if (size == 0) return buf;
     while (i < size - 1) {
         char c = (char)uart_getc();
         if (c == '\r' || c == '\n') break;
