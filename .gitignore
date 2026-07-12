@@ -1,0 +1,27 @@
+# Build artifacts
+*.o
+*.d
+*.elf
+*.img
+*.map
+*.bin
+*.hex
+
+# Build directories (keep build/Makefile and build/linker.ld)
+build/objects/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
