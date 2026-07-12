@@ -1,12 +1,14 @@
+.PHONY: build clean run
+
 # Don't use normal gcc, use the arm cross compiler
 CC = arm-none-eabi-gcc
 
 # Set any constants based on the raspberry pi model.  Version 1 has some differences to 2 and 3
 ifeq ($(RASPI_MODEL),1)
-    CPU = arm1176jzf-s
-    DIRECTIVES = -D MODEL_1
+	CPU = arm1176jzf-s
+	DIRECTIVES = -D MODEL_1
 else
-    CPU = cortex-a7
+	CPU = cortex-a7
 endif
 
 CFLAGS= -mcpu=$(CPU) -fpic -ffreestanding $(DIRECTIVES)
@@ -14,19 +16,21 @@ CSRCFLAGS= -O2 -Wall -Wextra
 LFLAGS= -ffreestanding -O2 -nostdlib
 
 # Location of the files
-KER_SRC = ../src/kernel
-KER_HEAD = ../include
-COMMON_SRC = ../src/common
-OBJ_DIR = objects
+KER_SRC = src/kernel
+KER_HEAD = include
+COMMON_SRC = src/common
+OBJ_DIR = build/objects
 KERSOURCES = $(wildcard $(KER_SRC)/*.c)
 COMMONSOURCES = $(wildcard $(COMMON_SRC)/*.c)
 ASMSOURCES = $(wildcard $(KER_SRC)/*.S)
 OBJECTS = $(patsubst $(KER_SRC)/%.c, $(OBJ_DIR)/%.o, $(KERSOURCES))
 OBJECTS += $(patsubst $(COMMON_SRC)/%.c, $(OBJ_DIR)/%.o, $(COMMONSOURCES))
 OBJECTS += $(patsubst $(KER_SRC)/%.S, $(OBJ_DIR)/%.o, $(ASMSOURCES))
-HEADERS = $(wildcard $(KER_HEAD)/*.h) $(wildcard $(KER_HEAD)/**/*.h)
+HEADERS = $(wildcard $(KER_HEAD)/*.h)
 
 IMG_NAME=kernel.img
+
+
 
 
 build: $(OBJECTS) $(HEADERS)
@@ -50,4 +54,4 @@ clean:
 	rm -f $(IMG_NAME)
 
 run: build
-	qemu-system-arm -m 256 -M raspi2 -serial stdio -kernel kernel.img
+	qemu-system-arm -m 1024 -M raspi2b -serial stdio -kernel kernel.img
