@@ -3,57 +3,68 @@
 
 #include "kernel/uart.h"
 
-static inline void mmio_write(uint32_t reg, uint32_t data)
+static inline void mmio_write(uintptr_t reg, uint32_t data)
 {
     *(volatile uint32_t *)reg = data;
 }
 
-static inline uint32_t mmio_read(uint32_t reg)
+static inline uint32_t mmio_read(uintptr_t reg)
 {
     return *(volatile uint32_t *)reg;
 }
 
-static inline void delay(int32_t count)
-{
-    asm volatile("__delay_%=: subs %[count], %[count], #1; bne __delay_%=\n"
-            : "=r"(count)
-            : [count]"0"(count)
-            : "cc");
-}
+/* BCM2711 (Raspberry Pi 4B) peripheral base: 0xFE000000 */
+#define GPIO_BASE    ((uintptr_t)0xFE200000)
+#define GPFSEL1      (GPIO_BASE + 0x04)
+#define GPPUPPDN0    (GPIO_BASE + 0xE4)
 
-enum
-{
-    GPIO_BASE = 0x3F200000,
-    GPPUD = GPIO_BASE + 0x94,
-    GPPUDCLK0 = GPIO_BASE + 0x98,
-
-    UART0_BASE = 0x3F201000,
-    UART0_DR = UART0_BASE + 0x00,
-    UART0_FR = UART0_BASE + 0x18,
-    UART0_IBRD = UART0_BASE + 0x24,
-    UART0_FBRD = UART0_BASE + 0x28,
-    UART0_LCRH = UART0_BASE + 0x2C,
-    UART0_CR = UART0_BASE + 0x30,
-    UART0_IMSC = UART0_BASE + 0x38,
-    UART0_ICR = UART0_BASE + 0x44,
-};
+#define UART0_BASE   ((uintptr_t)0xFE201000)
+#define UART0_DR     (UART0_BASE + 0x00)
+#define UART0_FR     (UART0_BASE + 0x18)
+#define UART0_IBRD   (UART0_BASE + 0x24)
+#define UART0_FBRD   (UART0_BASE + 0x28)
+#define UART0_LCRH   (UART0_BASE + 0x2C)
+#define UART0_CR     (UART0_BASE + 0x30)
+#define UART0_IMSC   (UART0_BASE + 0x38)
+#define UART0_ICR    (UART0_BASE + 0x44)
 
 void uart_init(void)
 {
+    /* Disable UART */
     mmio_write(UART0_CR, 0x00000000);
 
-    mmio_write(GPPUD, 0x00000000);
-    delay(150);
-    mmio_write(GPPUDCLK0, (1 << 14) | (1 << 15));
-    delay(150);
-    mmio_write(GPPUDCLK0, 0x00000000);
+    /* Set GPIO14 (TX) and GPIO15 (RX) to AF0 (UART0)
+     * GPFSEL1 bits [14:12] = GPIO14, bits [17:15] = GPIO15, AF0 = 0b100 */
+    uint32_t sel = mmio_read(GPFSEL1);
+    sel &= ~((uint32_t)0x7 << 12);
+    sel &= ~((uint32_t)0x7 << 15);
+    sel |=  ((uint32_t)0x4 << 12);
+    sel |=  ((uint32_t)0x4 << 15);
+    mmio_write(GPFSEL1, sel);
 
+    /* BCM2711: disable pull-up/down on GPIO14 and GPIO15 via GPPUPPDN0
+     * 2 bits per pin: GPIO14 = bits [29:28], GPIO15 = bits [31:30], 0b00 = no pull */
+    uint32_t pud = mmio_read(GPPUPPDN0);
+    pud &= ~((uint32_t)0xF << 28);
+    mmio_write(GPPUPPDN0, pud);
+
+    /* Clear pending interrupts */
     mmio_write(UART0_ICR, 0x7FF);
-    mmio_write(UART0_IBRD, 1);
-    mmio_write(UART0_FBRD, 40);
+
+    /* Baud rate: UART clock = 48 MHz, target = 115200 baud
+     * IBRD = 48000000 / (16 * 115200) = 26
+     * FBRD = round((48000000 / (16 * 115200) - 26) * 64) = 3 */
+    mmio_write(UART0_IBRD, 26);
+    mmio_write(UART0_FBRD, 3);
+
+    /* 8-bit word, FIFOs enabled, no parity, 1 stop bit */
     mmio_write(UART0_LCRH, (1 << 4) | (1 << 5) | (1 << 6));
+
+    /* Mask all interrupts */
     mmio_write(UART0_IMSC, (1 << 1) | (1 << 4) | (1 << 5) | (1 << 6) |
             (1 << 7) | (1 << 8) | (1 << 9) | (1 << 10));
+
+    /* Enable UART, TX, RX */
     mmio_write(UART0_CR, (1 << 0) | (1 << 8) | (1 << 9));
 }
 

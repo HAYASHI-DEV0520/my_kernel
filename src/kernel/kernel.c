@@ -1,22 +1,12 @@
-#include <stddef.h>   // size_t
-#include <stdint.h>   // uint32_t, int32_t など固定幅整数型
-
 #include "kernel/uart.h"
 #include "common/stdio.h"
 
 /*
- * カーネルエントリポイント（boot.S の blx r3 から呼ばれる）
- * r0:    ブートローダ渡し値（0固定）
- * r1:    ARM マシン種別 ID
- * atags: ブートローダからのハードウェア情報ポインタ（ATAGS またはデバイスツリー）
+ * カーネルエントリポイント（boot.S の bl kernel_main から呼ばれる）
+ * RPi 4B (AArch64): ファームウェアは x0 に DTB ポインタを渡すが現時点では未使用
  */
-void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags)
+void kernel_main(void)
 {
-    // 未使用引数の警告抑制（-Wextra 対策）
-    (void) r0;
-    (void) r1;
-    (void) atags;
-
     uart_init();
     puts("Hello, kernel World!\r\n");
 
@@ -25,6 +15,6 @@ void kernel_main(uint32_t r0, uint32_t r1, uint32_t atags)
     // 受信した文字をそのままエコーバックし続ける
     while (1) {
         putc(uart_getc());
-        puts("\ninput:");
+        puts("\r\ninput:");
     }
 }

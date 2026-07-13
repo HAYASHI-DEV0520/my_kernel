@@ -2,35 +2,18 @@
 
 void *memcpy(void *dest, const void *src, size_t n)
 {
-    asm volatile(
-        "   cmp     %[n], #0        \n"
-        "   beq     2f              \n"
-        "1: ldrb    r3, [%[src]], #1\n"
-        "   strb    r3, [%[dst]], #1\n"
-        "   subs    %[n], %[n], #1  \n"
-        "   bne     1b              \n"
-        "2:                         \n"
-        : [dst] "+r"(dest), [src] "+r"(src), [n] "+r"(n)
-        :
-        : "r3", "cc", "memory"
-    );
+    unsigned char *d = (unsigned char *)dest;
+    const unsigned char *s = (const unsigned char *)src;
+    for (size_t i = 0; i < n; i++)
+        d[i] = s[i];
     return dest;
 }
 
 void *memset(void *dest, int32_t c, size_t n)
 {
-    asm volatile(
-        "   cmp     %[n], #0        \n"
-        "   beq     2f              \n"
-        "   uxtb    r3, %[c]        \n"
-        "1: strb    r3, [%[dst]], #1\n"
-        "   subs    %[n], %[n], #1  \n"
-        "   bne     1b              \n"
-        "2:                         \n"
-        : [dst] "+r"(dest), [n] "+r"(n)
-        : [c] "r"(c)
-        : "r3", "cc", "memory"
-    );
+    unsigned char *d = (unsigned char *)dest;
+    for (size_t i = 0; i < n; i++)
+        d[i] = (unsigned char)c;
     return dest;
 }
 

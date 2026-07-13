@@ -1,17 +1,12 @@
 .PHONY: build clean run
 
-# Don't use normal gcc, use the arm cross compiler
-CC = arm-none-eabi-gcc
+# AArch64 bare-metal cross compiler (Raspberry Pi 4B)
+CC = aarch64-none-elf-gcc
+OBJCOPY = aarch64-none-elf-objcopy
 
-# Set any constants based on the raspberry pi model.  Version 1 has some differences to 2 and 3
-ifeq ($(RASPI_MODEL),1)
-	CPU = arm1176jzf-s
-	DIRECTIVES = -D MODEL_1
-else
-	CPU = cortex-a7
-endif
+CPU = cortex-a72
 
-CFLAGS= -mcpu=$(CPU) -fpic -ffreestanding $(DIRECTIVES)
+CFLAGS= -mcpu=$(CPU) -fno-pic -ffreestanding
 CSRCFLAGS= -O2 -Wall -Wextra
 LFLAGS= -ffreestanding -O2 -nostdlib
 
@@ -28,14 +23,12 @@ OBJECTS += $(patsubst $(COMMON_SRC)/%.c, $(OBJ_DIR)/%.o, $(COMMONSOURCES))
 OBJECTS += $(patsubst $(KER_SRC)/%.S, $(OBJ_DIR)/%.o, $(ASMSOURCES))
 HEADERS = $(wildcard $(KER_HEAD)/*.h)
 
-IMG_NAME=kernel.img
-
-
-
+ELF_NAME = kernel8.elf
+IMG_NAME = kernel8.img
 
 build: $(OBJECTS) $(HEADERS)
-	echo $(OBJECTS)
-	$(CC) -T linker.ld -o $(IMG_NAME) $(LFLAGS) $(OBJECTS)
+	$(CC) -T linker.ld -o $(ELF_NAME) $(LFLAGS) $(OBJECTS)
+	$(OBJCOPY) $(ELF_NAME) -O binary $(IMG_NAME)
 
 $(OBJ_DIR)/%.o: $(KER_SRC)/%.c $(HEADERS)
 	mkdir -p $(@D)
@@ -51,7 +44,8 @@ $(OBJ_DIR)/%.o: $(COMMON_SRC)/%.c $(HEADERS)
 
 clean:
 	rm -rf $(OBJ_DIR)
-	rm -f $(IMG_NAME)
+	rm -f $(ELF_NAME) $(IMG_NAME)
 
+# QEMUにはELFを渡す（アドレス情報が含まれるため）
 run: build
-	qemu-system-arm -m 1024 -M raspi2b -serial stdio -kernel kernel.img
+	qemu-system-aarch64 -m 2048 -M raspi4b -nographic -kernel $(ELF_NAME)
